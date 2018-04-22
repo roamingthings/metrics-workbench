@@ -1,0 +1,101 @@
+= Metrics Workbench Project
+
+The aim of this project is to experiment with the new metrics capabilities of Spring Boot 2 and Prometheus.
+
+The Prometheus stack used by this workbench is based on the great work of Brian Christner published under MIT license at
+https://github.com/vegasbrianc/prometheus
+
+== Setup
+
+=== Create a Docker overlay network
+
+Since Prometheus is scraping the services that are monitored the metrics endpoint of the service needs to be reachable by the prometheus host. If a Docker stack is set up it is not possible for containers that do not belong to the stack to connect to the networks of the service. Therefore a separat overlay network is required to both.
+
+Create an overlay network that is attachable:
+
+----
+$ docker network create --attachable --driver overlay prom-scrape
+----
+
+=== Attach the service container to the scraping network
+
+To attache a running container to the scraping network use the following command:
+
+----
+$ docker network connect prom-scrape metricswb
+----
+
+NOTE: This is required every time a new container has been created
+
+=== Startup the service stack
+
+To start the Prometheus stack issue the following command in the `./prometheus-stack` folder:
+
+----
+$ HOSTNAME=$(hostname) docker stack deploy -c docker-compose.yml prom
+----
+
+== Configuration
+
+=== Attach the Prometheus container to the scraping network
+
+In order for the Prometheus container to gain access to the created scraping-network it has to be attached in the `docker-compose.yaml` file:
+
+----
+...
+
+networks:
+  prom-scrape:
+    external: true
+
+....
+
+iservices:
+
+  prometheus:
+  ...
+    networks:
+      ...
+      - prom-scrape
+----
+
+=== Define the Prometheus job for the service
+
+Add the following configuration to the `prometheus-stack/prometheus/prometheus.yaml` configuration file:
+
+----
+  - job_name: 'spring-metrics'
+
+    scrape_interval: 5s
+
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['metrics:8081']
+----
+
+== Build the application image
+
+You can use gradle to build the Docker image, create the container and start the container. At the moment the command
+will fail if the container already exists or is running
+
+----
+$ ./gradlew clean startMetricsWbContainer
+----
+
+== Calling the sample service
+
+In order to generate some metrics call the service:
+
+----
+$ curl http://localhost:8081/hello
+----
+
+== Access the Prometheus frontend
+
+The Prometheus frontend is available at http://localhost:9090
+
+== Access the Grafana frontend
+
+The Grafana frontend is available at http://localhost:3000
+
+Use `admin` as the user and `foobar` as password
