@@ -8,7 +8,7 @@ buildscript {
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-        classpath("com.bmuschko:gradle-docker-plugin:4.10.0")
+        classpath("com.bmuschko:gradle-docker-plugin:6.4.0")
 	}
 }
 
@@ -47,16 +47,16 @@ dependencies {
 task buildMetricsWbImage(type: DockerBuildImage) {
     dependsOn build
     inputDir = file("$projectDir")
-    tags.add('roamingthings/metrics-workbench:latest')
+    images.add('roamingthings/metrics-workbench:latest')
 }
 
 task createMetricsWbContainer(type: DockerCreateContainer) {
     dependsOn buildMetricsWbImage
     targetImageId buildMetricsWbImage.getImageId()
-    portBindings = ['8081:8081']
-    containerName = 'metricswb'
-	autoRemove = true
-	
+	containerName = 'metricswb'
+	hostConfig.portBindings = ['8081:8081']
+	hostConfig.autoRemove = true
+
 }
 
 task startMetricsWbContainer(type: DockerStartContainer) {
